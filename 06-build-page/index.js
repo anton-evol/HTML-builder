@@ -1,36 +1,39 @@
 const fs = require('fs');
+const { rm } = require('fs/promises');
+const { readFile } = require('fs/promises');
 const { readdir } = require('fs/promises');
 const { copyFile } = require('fs/promises');
 const path = require('path');
 const dirProjectDist = path.resolve(__dirname, 'project-dist');
 
-//0.remove folder project-dist
-fs.promises.rm(dirProjectDist, { recursive: true, force: true }).then(() => {
+function main() {
+  //0.remove folder project-dist
+  // fs.promises.rmdir(dirProjectDist, { recursive: true, force: true }).then(() => {
   //1.make folder project-dist
   fs.promises.mkdir(dirProjectDist, { recursive: true }).then(() => {
     //2.make template parser and replacer for index html and components
-    const htmlSourceTemplate = path.resolve(__dirname, 'template.html');
-    const htmlSourceComponetsPath = path.resolve(__dirname, 'components');
-    const htmlOutputFile = path.resolve(__dirname, 'project-dist', 'index.html');
+    // const htmlSourceTemplate = path.resolve(__dirname, 'template.html');
+    // const htmlSourceComponetsPath = path.resolve(__dirname, 'components');
+    // const htmlOutputFile = path.resolve(__dirname, 'project-dist', 'index.html');
 
-    fs.copyFile(htmlSourceTemplate, htmlOutputFile, () => {
-      fs.readFile(htmlOutputFile, 'utf8', function (error, data) {
-        if (error) throw error;
-        fs.readdir(htmlSourceComponetsPath, { withFileTypes: true }, function (error, files) {
-          if (error) throw error;
-          files.forEach(function (file) {
-            fs.readFile(path.resolve(htmlSourceComponetsPath, file.name), 'utf8', function (error, dataFile) {
-              if (error) throw error;
-              let component = `{{${file.name.split('.')[0]}}}`;
-              data = data.replace(component, dataFile);
-              fs.writeFile(htmlOutputFile, data, function (error) {
-                if (error) throw error;
-              });
-            });
-          });
-        });
-      });
-    });
+    // fs.copyFile(htmlSourceTemplate, htmlOutputFile, () => {
+    // fs.readFile(htmlOutputFile, 'utf8', function (error, data) {
+    //   if (error) throw error;
+    //   fs.readdir(htmlSourceComponetsPath, { withFileTypes: true }, function (error, files) {
+    //     if (error) throw error;
+    //     files.forEach(function (file) {
+    //       fs.readFile(path.resolve(htmlSourceComponetsPath, file.name), 'utf8', function (error, dataFile) {
+    //         if (error) throw error;
+    //         let component = `{{${file.name.split('.')[0]}}}`;
+    //         data = data.replace(component, dataFile);
+    //         fs.writeFile(htmlOutputFile, data, function (error) {
+    //           if (error) throw error;
+    //         });
+    //       });
+    //     });
+    //   });
+    // });
+    // });
 
     //
     //
@@ -91,4 +94,45 @@ fs.promises.rm(dirProjectDist, { recursive: true, force: true }).then(() => {
       });
     });
   });
-});
+  // });
+}
+
+//2.make template parser and replacer for index html and components
+const htmlSourceTemplate = path.resolve(__dirname, 'template.html');
+const htmlSourceComponetsPath = path.resolve(__dirname, 'components');
+const htmlOutputFile = path.resolve(__dirname, 'project-dist', 'index.html');
+
+(async function () {
+  try {
+    await rm(dirProjectDist, { recursive: true, force: true });
+    main();
+    await makeHtmlIndexFile();
+  } catch (error) {
+    if (error) throw error;
+  }
+})();
+
+const getComponentsObject = async () => {
+  const components = {};
+  const files = await readdir(htmlSourceComponetsPath, { withFileTypes: true });
+  for (const file of files) {
+    const component = path.resolve(htmlSourceComponetsPath, file.name);
+    if (file.isFile() && path.extname(component) === '.html') {
+      const data = await readFile(component);
+      components[file.name] = data.toString();
+    }
+  }
+  return components;
+};
+
+async function makeHtmlIndexFile() {
+  const writeStream = fs.createWriteStream(htmlOutputFile);
+  const components = await getComponentsObject();
+  fs.readFile(htmlSourceTemplate, 'utf-8', (error, data) => {
+    if (error) throw error;
+    for (const component of Object.keys(components)) {
+      data = data.replace(`{{${component.split('.')[0]}}}`, components[component]);
+    }
+    writeStream.write(data);
+  });
+}
