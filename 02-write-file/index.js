@@ -7,13 +7,15 @@ const output = fs.createWriteStream(fullFileName);
 stdout.write('Привет, проверяющий! Здесь ты можешь написать всё что-угодно. Приступим?\n');
 stdin.on('data', (data) => {
   if (data.toString() === 'exit\n') {
-    process.exit();
+    endProcess();
   } else {
     output.write(data);
     stdout.write('Можно писать ещё, смелее!\n');
   }
 });
+process.on('SIGINT', endProcess);
 
-process.on('exit', () => {
+function endProcess() {
   stdout.write('\nУстал? Отдохни и приходи ещё!\n');
-});
+  process.exit();
+}
