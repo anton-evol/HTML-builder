@@ -6,7 +6,7 @@ const output = fs.createWriteStream(fullFileName);
 
 stdout.write('Привет, проверяющий! Здесь ты можешь написать всё что-угодно. Приступим?\n');
 stdin.on('data', (data) => {
-  if (data.toString() === 'exit' || data.toString() === 'exit\n') {
+  if (data.toString().trim() == 'exit' || data.toString().trim() == 'exit\n') {
     endProcess();
   } else {
     output.write(data);
